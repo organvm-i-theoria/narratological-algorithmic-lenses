@@ -162,8 +162,16 @@ def run_algorithm(
     ] = "analyze",
     provider: Annotated[
         str,
-        typer.Option("--provider", "-p", help="LLM provider: anthropic, openai, mock"),
-    ] = "anthropic",
+        typer.Option("--provider", "-p", help="LLM provider: ollama, anthropic, openai, mock"),
+    ] = "ollama",
+    model: Annotated[
+        Optional[str],
+        typer.Option("--model", help="Model name override"),
+    ] = None,
+    base_url: Annotated[
+        Optional[str],
+        typer.Option("--base-url", help="Custom API endpoint for OpenAI-compatible providers"),
+    ] = None,
     output: Annotated[
         Optional[Path],
         typer.Option("--output", "-o", help="Output file for results (JSON)"),
@@ -200,10 +208,22 @@ def run_algorithm(
         console.print(f"[red]{e}[/red]")
         raise typer.Exit(1)
 
-    # Create executor
+    # Create executor with provider options
     console.print(f"[dim]Using provider: {provider}[/dim]")
+    if model:
+        console.print(f"[dim]Model: {model}[/dim]")
+    if base_url:
+        console.print(f"[dim]Base URL: {base_url}[/dim]")
+
+    # Build provider kwargs
+    provider_kwargs = {}
+    if model:
+        provider_kwargs["model"] = model
+    if base_url:
+        provider_kwargs["base_url"] = base_url
+
     try:
-        executor = create_executor(provider)
+        executor = create_executor(provider, **provider_kwargs)
     except ImportError as e:
         console.print(f"[red]Provider not available: {e}[/red]")
         raise typer.Exit(1)

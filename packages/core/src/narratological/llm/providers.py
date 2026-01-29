@@ -144,6 +144,112 @@ Return ONLY the JSON object, no additional text."""
         return schema.model_validate(data)
 
 
+class OllamaProvider:
+    """LLM provider using Ollama's OpenAI-compatible API.
+
+    Works with Ollama and other OpenAI-compatible local LLM servers
+    (LiteLLM, vLLM, LocalAI, etc.). No API key required for local models.
+    """
+
+    def __init__(
+        self,
+        model: str = "llama3.2",
+        base_url: str | None = None,
+        max_tokens: int = 4096,
+    ):
+        """Initialize the Ollama provider.
+
+        Args:
+            model: The model to use (e.g., 'llama3.2', 'mistral', 'codellama').
+            base_url: API endpoint URL. Defaults to OLLAMA_HOST env var or localhost.
+            max_tokens: Maximum tokens in the response.
+        """
+        import os
+
+        try:
+            import openai
+        except ImportError as e:
+            raise ImportError(
+                "openai package required for Ollama provider. Install with: pip install openai"
+            ) from e
+
+        # Resolve base URL: parameter > env var > default
+        if base_url is None:
+            base_url = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+
+        # Ensure /v1 suffix for OpenAI compatibility
+        if not base_url.endswith("/v1"):
+            base_url = base_url.rstrip("/") + "/v1"
+
+        self.client = openai.OpenAI(
+            base_url=base_url,
+            api_key="ollama",  # allow-secret: Ollama doesn't require a key but openai client needs one
+        )
+        self.model = model
+        self.max_tokens = max_tokens
+        self.base_url = base_url
+
+    def complete(self, prompt: str, *, system: str | None = None) -> CompletionResult:
+        """Generate a text completion using Ollama."""
+        messages: list[dict[str, str]] = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            max_tokens=self.max_tokens,
+            messages=messages,
+        )
+
+        content = response.choices[0].message.content or ""
+        usage = {}
+        if response.usage:
+            usage = {
+                "input_tokens": response.usage.prompt_tokens,
+                "output_tokens": response.usage.completion_tokens,
+            }
+
+        return CompletionResult(
+            content=content,
+            model=response.model,
+            usage=usage,
+            raw_response=response,
+        )
+
+    def complete_structured(
+        self,
+        prompt: str,
+        schema: type[T],
+        *,
+        system: str | None = None,
+    ) -> T:
+        """Generate a structured completion matching a Pydantic schema."""
+        schema_json = json.dumps(schema.model_json_schema(), indent=2)
+        structured_prompt = f"""{prompt}
+
+Respond with valid JSON matching this schema:
+{schema_json}
+
+Return ONLY the JSON object, no additional text or markdown code blocks."""
+
+        result = self.complete(structured_prompt, system=system)
+
+        # Handle potential markdown code block wrapping
+        content = result.content.strip()
+        if content.startswith("```"):
+            # Remove markdown code block
+            lines = content.split("\n")
+            if lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].strip() == "```":
+                lines = lines[:-1]
+            content = "\n".join(lines)
+
+        data = json.loads(content)
+        return schema.model_validate(data)
+
+
 class OpenAIProvider:
     """LLM provider using OpenAI's API.
 
@@ -154,12 +260,14 @@ class OpenAIProvider:
         self,
         model: str = "gpt-4o",
         max_tokens: int = 4096,
+        base_url: str | None = None,
     ):
         """Initialize the OpenAI provider.
 
         Args:
             model: The OpenAI model to use.
             max_tokens: Maximum tokens in the response.
+            base_url: Optional custom API endpoint for OpenAI-compatible services.
         """
         try:
             import openai
@@ -168,9 +276,14 @@ class OpenAIProvider:
                 "openai package required. Install with: pip install openai"
             ) from e
 
-        self.client = openai.OpenAI()
+        client_kwargs = {}
+        if base_url:
+            client_kwargs["base_url"] = base_url
+
+        self.client = openai.OpenAI(**client_kwargs)
         self.model = model
         self.max_tokens = max_tokens
+        self.base_url = base_url
 
     def complete(self, prompt: str, *, system: str | None = None) -> CompletionResult:
         """Generate a text completion using OpenAI."""
@@ -356,7 +469,7 @@ def get_provider(provider_name: str, **kwargs: Any) -> LLMProvider:
     """Factory function to get an LLM provider by name.
 
     Args:
-        provider_name: One of 'anthropic', 'openai', or 'mock'.
+        provider_name: One of 'ollama', 'anthropic', 'openai', or 'mock'.
         **kwargs: Additional arguments to pass to the provider constructor.
 
     Returns:
@@ -366,6 +479,7 @@ def get_provider(provider_name: str, **kwargs: Any) -> LLMProvider:
         ValueError: If the provider name is not recognized.
     """
     providers = {
+        "ollama": OllamaProvider,
         "anthropic": AnthropicProvider,
         "openai": OpenAIProvider,
         "mock": MockProvider,
