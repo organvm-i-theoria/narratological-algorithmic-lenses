@@ -7,6 +7,14 @@
 
 # Narratological Algorithmic Lenses
 
+[![CI](https://github.com/organvm-i-theoria/narratological-algorithmic-lenses/actions/workflows/ci.yml/badge.svg)](https://github.com/organvm-i-theoria/narratological-algorithmic-lenses/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-pending-lightgrey)](https://github.com/organvm-i-theoria/narratological-algorithmic-lenses)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/organvm-i-theoria/narratological-algorithmic-lenses/blob/main/LICENSE)
+[![Organ I](https://img.shields.io/badge/Organ-I%20Theoria-8B5CF6)](https://github.com/organvm-i-theoria)
+[![Status](https://img.shields.io/badge/status-active-brightgreen)](https://github.com/organvm-i-theoria/narratological-algorithmic-lenses)
+[![Python](https://img.shields.io/badge/lang-Python-informational)](https://github.com/organvm-i-theoria/narratological-algorithmic-lenses)
+
+
 **Formalizing narrative principles from master storytellers into executable algorithms.**
 
 14 narratological studies. 79 axioms. 92 algorithms. A full-stack analysis system — CLI, REST API, and web dashboard — that transforms centuries of storytelling craft into structured, computable knowledge, then proves itself against real creative material.
