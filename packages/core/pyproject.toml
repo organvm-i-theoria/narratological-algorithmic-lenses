@@ -22,5 +22,8 @@ nlp = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build]
+include = ["src/narratological/data/*.json"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/narratological"]

@@ -6,7 +6,7 @@ to identify framework-specific issues.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
@@ -52,7 +52,7 @@ class FrameworkDiagnostic(BaseDiagnostic):
         self,
         provider: LLMProvider | None = None,
         compendium: Compendium | None = None,
-        **kwargs,
+        **kwargs: Any,
     ):
         """Initialize the framework diagnostic.
 
@@ -132,9 +132,8 @@ class FrameworkDiagnostic(BaseDiagnostic):
         if self.compendium is None:
             return []
 
-        try:
-            study = self.compendium.get_study(study_id)
-        except KeyError:
+        study = self.compendium.get_study(study_id)
+        if study is None:
             return [
                 self.create_issue(
                     description=f"Study '{study_id}' not found in compendium",
@@ -281,14 +280,17 @@ Respond as JSON."""
         """Get list of available framework study IDs."""
         if self.compendium is None:
             return []
-        return [s.id for s in self.compendium.studies if s.diagnostic_questions]
+        return [
+            study.id
+            for study in self.compendium.studies.values()
+            if study.diagnostic_questions
+        ]
 
     def get_question_count(self, study_id: str) -> int:
         """Get number of diagnostic questions for a study."""
         if self.compendium is None:
             return 0
-        try:
-            study = self.compendium.get_study(study_id)
-            return len(study.diagnostic_questions)
-        except KeyError:
+        study = self.compendium.get_study(study_id)
+        if study is None:
             return 0
+        return len(study.diagnostic_questions)

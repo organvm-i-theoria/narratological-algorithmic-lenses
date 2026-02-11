@@ -5,14 +5,18 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query
 
 from narratological.loader import load_compendium, load_study
-from narratological.models.study import Category, Study
+from narratological.models.study import Category
 
 router = APIRouter()
+
+CATEGORY_FILTER = Query(None, description="Filter by category")
+SEARCH_QUERY = Query(..., description="Search query")
+SEARCH_LIMIT = Query(20, ge=1, le=100, description="Max results")
 
 
 @router.get("/")
 async def list_studies(
-    category: Category | None = Query(None, description="Filter by category"),
+    category: Category | None = CATEGORY_FILTER,
 ) -> list[dict[str, Any]]:
     """List all available studies with optional category filter."""
     compendium = load_compendium()
@@ -60,117 +64,10 @@ async def list_sequence_pairs() -> list[dict[str, Any]]:
     ]
 
 
-@router.get("/{study_id}")
-async def get_study(study_id: str) -> dict[str, Any]:
-    """Get a complete study by ID."""
-    try:
-        study = load_study(study_id)
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-    return study.model_dump()
-
-
-@router.get("/{study_id}/axioms")
-async def get_study_axioms(study_id: str) -> list[dict[str, Any]]:
-    """Get all axioms for a study."""
-    try:
-        study = load_study(study_id)
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-    return [a.model_dump() for a in study.axioms]
-
-
-@router.get("/{study_id}/axioms/{axiom_id}")
-async def get_axiom(study_id: str, axiom_id: str) -> dict[str, Any]:
-    """Get a specific axiom by ID."""
-    try:
-        study = load_study(study_id)
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-    axiom = study.get_axiom(axiom_id)
-    if axiom is None:
-        raise HTTPException(status_code=404, detail=f"Axiom {axiom_id} not found")
-
-    return axiom.model_dump()
-
-
-@router.get("/{study_id}/algorithms")
-async def get_study_algorithms(study_id: str) -> list[dict[str, Any]]:
-    """Get all algorithms for a study."""
-    try:
-        study = load_study(study_id)
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-    return [a.model_dump() for a in study.core_algorithms]
-
-
-@router.get("/{study_id}/algorithms/{algo_name}")
-async def get_algorithm(study_id: str, algo_name: str) -> dict[str, Any]:
-    """Get a specific algorithm by name."""
-    try:
-        study = load_study(study_id)
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-    algo = study.get_algorithm(algo_name)
-    if algo is None:
-        raise HTTPException(status_code=404, detail=f"Algorithm '{algo_name}' not found")
-
-    return algo.model_dump()
-
-
-@router.get("/{study_id}/questions")
-async def get_study_questions(study_id: str) -> list[dict[str, Any]]:
-    """Get all diagnostic questions for a study."""
-    try:
-        study = load_study(study_id)
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-    return [q.model_dump() for q in study.diagnostic_questions]
-
-
-@router.get("/{study_id}/hierarchy")
-async def get_study_hierarchy(study_id: str) -> dict[str, Any]:
-    """Get the structural hierarchy for a study."""
-    try:
-        study = load_study(study_id)
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-    return study.structural_hierarchy.model_dump()
-
-
-@router.get("/{study_id}/quick-reference")
-async def get_quick_reference(study_id: str) -> dict[str, Any]:
-    """Get the quick reference card for a study."""
-    try:
-        study = load_study(study_id)
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-    return study.quick_reference.model_dump()
-
-
-@router.get("/{study_id}/correspondences")
-async def get_correspondences(study_id: str) -> dict[str, Any]:
-    """Get theoretical correspondences for a study."""
-    try:
-        study = load_study(study_id)
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-    return study.theoretical_correspondences.model_dump()
-
-
 @router.get("/search/axioms")
 async def search_axioms(
-    q: str = Query(..., description="Search query"),
-    limit: int = Query(20, ge=1, le=100, description="Max results"),
+    q: str = SEARCH_QUERY,
+    limit: int = SEARCH_LIMIT,
 ) -> list[dict[str, Any]]:
     """Search axioms across all studies."""
     compendium = load_compendium()
@@ -187,8 +84,8 @@ async def search_axioms(
 
 @router.get("/search/algorithms")
 async def search_algorithms(
-    q: str = Query(..., description="Search query"),
-    limit: int = Query(20, ge=1, le=100, description="Max results"),
+    q: str = SEARCH_QUERY,
+    limit: int = SEARCH_LIMIT,
 ) -> list[dict[str, Any]]:
     """Search algorithms across all studies."""
     compendium = load_compendium()
@@ -201,3 +98,110 @@ async def search_algorithms(
         }
         for study_id, algo in results[:limit]
     ]
+
+
+@router.get("/{study_id}")
+async def get_study(study_id: str) -> dict[str, Any]:
+    """Get a complete study by ID."""
+    try:
+        study = load_study(study_id)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+    return study.model_dump()
+
+
+@router.get("/{study_id}/axioms")
+async def get_study_axioms(study_id: str) -> list[dict[str, Any]]:
+    """Get all axioms for a study."""
+    try:
+        study = load_study(study_id)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+    return [a.model_dump() for a in study.axioms]
+
+
+@router.get("/{study_id}/axioms/{axiom_id}")
+async def get_axiom(study_id: str, axiom_id: str) -> dict[str, Any]:
+    """Get a specific axiom by ID."""
+    try:
+        study = load_study(study_id)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+    axiom = study.get_axiom(axiom_id)
+    if axiom is None:
+        raise HTTPException(status_code=404, detail=f"Axiom {axiom_id} not found")
+
+    return axiom.model_dump()
+
+
+@router.get("/{study_id}/algorithms")
+async def get_study_algorithms(study_id: str) -> list[dict[str, Any]]:
+    """Get all algorithms for a study."""
+    try:
+        study = load_study(study_id)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+    return [a.model_dump() for a in study.core_algorithms]
+
+
+@router.get("/{study_id}/algorithms/{algo_name}")
+async def get_algorithm(study_id: str, algo_name: str) -> dict[str, Any]:
+    """Get a specific algorithm by name."""
+    try:
+        study = load_study(study_id)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+    algo = study.get_algorithm(algo_name)
+    if algo is None:
+        raise HTTPException(status_code=404, detail=f"Algorithm '{algo_name}' not found")
+
+    return algo.model_dump()
+
+
+@router.get("/{study_id}/questions")
+async def get_study_questions(study_id: str) -> list[dict[str, Any]]:
+    """Get all diagnostic questions for a study."""
+    try:
+        study = load_study(study_id)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+    return [q.model_dump() for q in study.diagnostic_questions]
+
+
+@router.get("/{study_id}/hierarchy")
+async def get_study_hierarchy(study_id: str) -> dict[str, Any]:
+    """Get the structural hierarchy for a study."""
+    try:
+        study = load_study(study_id)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+    return study.structural_hierarchy.model_dump()
+
+
+@router.get("/{study_id}/quick-reference")
+async def get_quick_reference(study_id: str) -> dict[str, Any]:
+    """Get the quick reference card for a study."""
+    try:
+        study = load_study(study_id)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+    return study.quick_reference.model_dump()
+
+
+@router.get("/{study_id}/correspondences")
+async def get_correspondences(study_id: str) -> dict[str, Any]:
+    """Get theoretical correspondences for a study."""
+    try:
+        study = load_study(study_id)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+    return study.theoretical_correspondences.model_dump()

@@ -12,13 +12,13 @@ Tests cover:
 import pytest
 
 from narratological.diagnostics import (
-    BaseDiagnostic,
     CausalBindingDiagnostic,
     DiagnosticContext,
     DiagnosticMetrics,
     DiagnosticRunner,
     DiagnosticThresholds,
     DiagnosticType,
+    FrameworkDiagnostic,
     InformationEconomyDiagnostic,
     NecessityDiagnostic,
     ReorderabilityDiagnostic,
@@ -26,9 +26,9 @@ from narratological.diagnostics import (
     create_diagnostic_runner,
 )
 from narratological.llm import MockProvider
+from narratological.loader import load_compendium
 from narratological.models.analysis import ConnectorType
 from narratological.models.report import DiagnosticReport, DiagnosticSeverity
-
 
 # =============================================================================
 # Fixtures
@@ -386,6 +386,58 @@ class TestInformationEconomyDiagnostic:
         issues = diagnostic.run(simple_context)
 
         assert isinstance(issues, list)
+
+
+# =============================================================================
+# Test FrameworkDiagnostic
+# =============================================================================
+
+
+class TestFrameworkDiagnostic:
+    """Tests for framework-based diagnostics."""
+
+    @pytest.fixture
+    def framework_diagnostic(self):
+        """Create a framework diagnostic with a loaded compendium."""
+        return FrameworkDiagnostic(compendium=load_compendium())
+
+    def test_unknown_study_without_provider_returns_info_issue(
+        self,
+        framework_diagnostic,
+        simple_context,
+    ):
+        """Unknown study IDs should not crash when no provider is configured."""
+        issues = framework_diagnostic.run(simple_context, study_ids=["does-not-exist"])
+
+        assert len(issues) == 1
+        assert issues[0].severity == DiagnosticSeverity.INFO
+        assert "provider" in issues[0].description.lower()
+
+    def test_unknown_study_with_provider_returns_info_issue(
+        self,
+        simple_context,
+    ):
+        """Unknown study IDs should be handled safely with a provider as well."""
+        diagnostic = FrameworkDiagnostic(
+            provider=MockProvider(),
+            compendium=load_compendium(),
+        )
+        issues = diagnostic.run(simple_context, study_ids=["does-not-exist"])
+
+        assert len(issues) == 1
+        assert issues[0].severity == DiagnosticSeverity.INFO
+        assert "not found" in issues[0].description.lower()
+
+    def test_get_available_frameworks_returns_study_ids(self, framework_diagnostic):
+        """Available frameworks should be returned as non-empty study ID strings."""
+        frameworks = framework_diagnostic.get_available_frameworks()
+
+        assert frameworks
+        assert all(isinstance(study_id, str) for study_id in frameworks)
+
+    def test_get_question_count_unknown_study_is_zero(self, framework_diagnostic):
+        """Question count should be deterministic for unknown studies."""
+        assert framework_diagnostic.get_question_count("does-not-exist") == 0
 
 
 # =============================================================================

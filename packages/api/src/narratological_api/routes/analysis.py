@@ -1,6 +1,6 @@
 """API routes for script/narrative analysis."""
 
-from typing import Any
+from typing import Any, NoReturn
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -41,28 +41,51 @@ class AnalysisStatusResponse(BaseModel):
     message: str | None = Field(None, description="Status message")
 
 
-@router.post("/scene")
+class NotImplementedResponse(BaseModel):
+    """Structured response payload for unimplemented endpoints."""
+
+    status: str = Field("not_implemented", description="Endpoint implementation status")
+    code: str = Field("ANALYSIS_NOT_IMPLEMENTED", description="Machine-readable error code")
+    message: str = Field(..., description="User-facing explanation")
+    planned: str = Field(..., description="Planned implementation area")
+
+
+def _raise_not_implemented(message: str, planned: str) -> NoReturn:
+    """Raise a standardized 501 error payload."""
+    raise HTTPException(
+        status_code=501,
+        detail=NotImplementedResponse(
+            status="not_implemented",
+            code="ANALYSIS_NOT_IMPLEMENTED",
+            message=message,
+            planned=planned,
+        ).model_dump(),
+    )
+
+
+NOT_IMPLEMENTED_RESPONSES: dict[int | str, dict[str, Any]] = {
+    501: {
+        "model": NotImplementedResponse,
+        "description": "Endpoint exists but implementation is not available yet.",
+    }
+}
+
+
+@router.post("/scene", responses=NOT_IMPLEMENTED_RESPONSES)
 async def analyze_scene(request: SceneAnalysisRequest) -> dict[str, Any]:
     """Analyze a single scene.
 
     Note: Full analysis requires LLM integration. This endpoint
     returns a placeholder response showing the expected structure.
     """
-    return {
-        "status": "partial",
-        "message": "Full scene analysis requires LLM integration",
-        "expected_response": {
-            "function": "ESCALATE",
-            "secondary_function": None,
-            "tension_level": 7,
-            "connector_suggested": "THEREFORE",
-            "notes": "Scene analysis notes would appear here",
-        },
-        "framework_used": request.framework,
-    }
+    _ = request
+    _raise_not_implemented(
+        message="Full scene analysis requires LLM orchestration and script context.",
+        planned="scene-analysis-pipeline",
+    )
 
 
-@router.post("/script")
+@router.post("/script", responses=NOT_IMPLEMENTED_RESPONSES)
 async def upload_script(request: ScriptUploadRequest) -> dict[str, Any]:
     """Upload a script for analysis.
 
@@ -74,76 +97,70 @@ async def upload_script(request: ScriptUploadRequest) -> dict[str, Any]:
     # 2. Queue it for analysis
     # 3. Return an analysis ID
 
-    return {
-        "status": "accepted",
-        "message": "Script upload requires full implementation",
-        "analysis_id": "placeholder-id",
-        "title": request.title,
-        "format": request.format,
-    }
+    _ = request
+    _raise_not_implemented(
+        message="Script upload and analysis queueing are not implemented yet.",
+        planned="script-ingestion-and-job-queue",
+    )
 
 
-@router.get("/script/{analysis_id}/status")
+@router.get("/script/{analysis_id}/status", responses=NOT_IMPLEMENTED_RESPONSES)
 async def get_analysis_status(analysis_id: str) -> AnalysisStatusResponse:
     """Get the status of a script analysis."""
-    # Placeholder response
-    return AnalysisStatusResponse(
-        status="pending",
-        progress=0.0,
-        message="Analysis not yet implemented",
+    _ = analysis_id
+    _raise_not_implemented(
+        message="Analysis status tracking is not implemented yet.",
+        planned="analysis-status-tracking",
     )
 
 
-@router.get("/script/{analysis_id}/reports")
+@router.get("/script/{analysis_id}/reports", responses=NOT_IMPLEMENTED_RESPONSES)
 async def get_analysis_reports(analysis_id: str) -> dict[str, Any]:
     """Get all available reports for a completed analysis."""
-    return {
-        "analysis_id": analysis_id,
-        "status": "pending",
-        "reports": {
-            "coverage": None,
-            "beat_map": None,
-            "structural": None,
-            "character_atlas": None,
-            "diagnostic": None,
-        },
-        "message": "Reports require completed analysis",
-    }
+    _ = analysis_id
+    _raise_not_implemented(
+        message="Analysis reports are not available until the analysis pipeline is implemented.",
+        planned="report-generation-pipeline",
+    )
 
 
-@router.get("/script/{analysis_id}/reports/coverage")
+@router.get("/script/{analysis_id}/reports/coverage", responses=NOT_IMPLEMENTED_RESPONSES)
 async def get_coverage_report(analysis_id: str) -> dict[str, Any]:
     """Get the coverage report for a completed analysis."""
-    raise HTTPException(
-        status_code=501,
-        detail="Coverage report generation requires full implementation",
+    _ = analysis_id
+    _raise_not_implemented(
+        message="Coverage report generation is not implemented yet.",
+        planned="coverage-report-generator",
     )
 
 
-@router.get("/script/{analysis_id}/reports/beat-map")
+@router.get("/script/{analysis_id}/reports/beat-map", responses=NOT_IMPLEMENTED_RESPONSES)
 async def get_beat_map(analysis_id: str) -> dict[str, Any]:
     """Get the beat map for a completed analysis."""
-    raise HTTPException(
-        status_code=501,
-        detail="Beat map generation requires full implementation",
+    _ = analysis_id
+    _raise_not_implemented(
+        message="Beat map generation is not implemented yet.",
+        planned="beat-map-generator",
     )
 
 
-@router.get("/script/{analysis_id}/reports/structural")
+@router.get("/script/{analysis_id}/reports/structural", responses=NOT_IMPLEMENTED_RESPONSES)
 async def get_structural_report(analysis_id: str) -> dict[str, Any]:
     """Get the structural analysis report."""
-    raise HTTPException(
-        status_code=501,
-        detail="Structural analysis requires full implementation",
+    _ = analysis_id
+    _raise_not_implemented(
+        message="Structural analysis reporting is not implemented yet.",
+        planned="structural-report-generator",
     )
 
 
-@router.get("/script/{analysis_id}/reports/character-atlas")
+@router.get("/script/{analysis_id}/reports/character-atlas", responses=NOT_IMPLEMENTED_RESPONSES)
 async def get_character_atlas(analysis_id: str) -> dict[str, Any]:
     """Get the character atlas for a completed analysis."""
-    raise HTTPException(
-        status_code=501,
-        detail="Character atlas generation requires full implementation",
+    _ = analysis_id
+    _raise_not_implemented(
+        message="Character atlas generation is not implemented yet.",
+        planned="character-atlas-generator",
     )
 
 

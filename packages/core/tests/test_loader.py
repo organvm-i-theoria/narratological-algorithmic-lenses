@@ -13,7 +13,6 @@ from narratological.loader import (
 )
 from narratological.models.study import Category, Compendium, Study
 
-
 # Path to the actual unified JSON for integration tests
 # __file__ = packages/core/tests/test_loader.py -> go up 4 levels to repo root
 SPECS_PATH = Path(__file__).parent.parent.parent.parent / "specs" / "03-structured-data"
@@ -34,6 +33,13 @@ class TestLoadCompendium:
     def test_load_compendium_from_path(self, compendium_path):
         """Test loading the compendium from an explicit path."""
         compendium = load_compendium(compendium_path)
+        assert isinstance(compendium, Compendium)
+        assert compendium.meta.study_count == 14
+
+    def test_load_compendium_default_outside_repo_cwd(self, monkeypatch, tmp_path):
+        """Default loading should work from outside the repository directory."""
+        monkeypatch.chdir(tmp_path)
+        compendium = load_compendium()
         assert isinstance(compendium, Compendium)
         assert compendium.meta.study_count == 14
 

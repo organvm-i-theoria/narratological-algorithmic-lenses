@@ -7,6 +7,7 @@ or individual study files.
 from __future__ import annotations
 
 import json
+from importlib import resources
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -42,6 +43,21 @@ def _get_default_compendium_path() -> Path:
     )
 
 
+def _load_packaged_compendium() -> Compendium | None:
+    """Load packaged compendium data from package resources if available."""
+    resource = resources.files("narratological").joinpath(
+        "data/narratological-algorithms-unified.json"
+    )
+
+    if not resource.is_file():
+        return None
+
+    with resource.open("r", encoding="utf-8") as file_obj:
+        data = json.load(file_obj)
+
+    return Compendium.model_validate(data)
+
+
 def load_compendium(path: str | PathLike[str] | None = None) -> Compendium:
     """Load the complete narratological algorithm compendium.
 
@@ -56,6 +72,9 @@ def load_compendium(path: str | PathLike[str] | None = None) -> Compendium:
         ValidationError: If the JSON doesn't match the expected schema.
     """
     if path is None:
+        packaged = _load_packaged_compendium()
+        if packaged is not None:
+            return packaged
         file_path = _get_default_compendium_path()
     else:
         file_path = Path(path)
