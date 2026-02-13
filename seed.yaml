@@ -1,0 +1,37 @@
+# seed.yaml — Automation Contract for organvm-i-theoria/narratological-algorithmic-lenses
+# Schema: seed/v1.0
+# Generated: 2026-02-12 (AUTONOMY Sprint)
+# Category: standard
+
+schema_version: "1.0"
+organ: I
+organ_name: Theory
+repo: narratological-algorithmic-lenses
+org: organvm-i-theoria
+
+metadata:
+  implementation_status: PRODUCTION
+  tier: standard
+  promotion_status: CANDIDATE
+  last_validated: "2026-02-11"
+  generated: "2026-02-12"
+  sprint: "AUTONOMY"
+
+agents:
+  - name: ci
+    trigger: on_push
+    workflow: .github/workflows/ci-python.yml
+    description: "Continuous integration pipeline"
+
+produces:
+  - type: dependency
+    description: Consumed by organvm-ii-poiesis/art-from--narratological-algorithmic-lenses
+    consumers: [organvm-ii-poiesis/art-from--narratological-algorithmic-lenses]
+
+subscriptions:
+  - event: governance.updated
+    source: ORGAN-IV
+    action: Check compliance with updated governance rules
+  - event: health-audit.completed
+    source: ORGAN-IV
+    action: Review audit findings for this repo
