@@ -10,7 +10,7 @@ jobs:
   stale:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@v10
+      - uses: actions/stale@v11
         with:
           stale-issue-message: 'Marked stale due to inactivity. Will close in 14 days.'
           stale-pr-message: 'Marked stale due to inactivity. Will close in 14 days.'
